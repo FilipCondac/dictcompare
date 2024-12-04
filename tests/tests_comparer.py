@@ -104,30 +104,30 @@ def test_ignore_nested_keys(comparer):
     assert result["modified"] == []  # City is ignored
 
 
-def test_compare_numeric_with_tolerance_default(comparer):
+def test_compare_numeric_with_numeric_tolerance_default(comparer):
     dict1 = {"value": 100.0}
-    dict2 = {"value": 100.4}  # Difference within default tolerance (0.0)
-    result = comparer.compare(dict1, dict2, tolerance=0.5)
+    dict2 = {"value": 100.4}  # Difference within default numeric_tolerance (0.0)
+    result = comparer.compare(dict1, dict2, numeric_tolerance=0.5)
     assert result["added"] == []
     assert result["removed"] == []
-    assert result["modified"] == []  # Within tolerance, no modification detected
+    assert result["modified"] == []  # Within numeric_tolerance, no modification detected
 
 
-def test_compare_numeric_with_tolerance_override(comparer):
+def test_compare_numeric_with_numeric_tolerance_override(comparer):
     dict1 = {"value": 100}
-    dict2 = {"value": 101}  # Difference outside tolerance
-    result = comparer.compare(dict1, dict2, tolerance=0.5)
+    dict2 = {"value": 101}  # Difference outside numeric_tolerance
+    result = comparer.compare(dict1, dict2, numeric_tolerance=0.5)
     assert result["added"] == []
     assert result["removed"] == []
     assert result["modified"] == [{"key": "value", "change_type": "value", "old_value": 100, "new_value": 101}]
 
 
-def test_compare_nested_lists_and_tolerance(comparer):
+def test_compare_nested_lists_and_numeric_tolerance(comparer):
     dict1 = {"numbers": [1, 2, 3], "nested": {"list": [1.0, 2.0, 3.0]}}
-    dict2 = {"numbers": [2, 3, 4], "nested": {"list": [1.0, 2.1, 3.0]}}  # Within tolerance for nested list
-    result = comparer.compare(dict1, dict2, tolerance=0.2)
+    dict2 = {"numbers": [2, 3, 4], "nested": {"list": [1.0, 2.1, 3.0]}}  # Within numeric_tolerance for nested list
+    result = comparer.compare(dict1, dict2, numeric_tolerance=0.2)
     assert result["added"] == []
     assert result["removed"] == []
     assert result["modified"] == [
         {"key": "numbers", "change_type": "list", "added": [4], "removed": [1]}
-    ]  # No modification for "nested.list" because of tolerance
+    ]  # No modification for "nested.list" because of numeric_tolerance

@@ -1,24 +1,26 @@
 class DictionaryComparer:
-    def __init__(self, strict_types: bool = True, ignore_keys: list[str] = None, tolerance: float = 0.0):
+    def __init__(self, strict_types: bool = True, ignore_keys: list[str] = None, numeric_tolerance: float = 0.0):
         """
         Initialize the comparer with optional configurations.
 
         :param strict_types: Whether to enforce strict type checking.
         :param ignore_keys: List of keys (or key paths) to ignore during comparison.
-        :param tolerance: Tolerance level for numeric comparisons.
+        :param numeric_tolerance: numeric_tolerance level for numeric comparisons.
         """
         self.strict_types = strict_types
         self.ignore_keys = ignore_keys or []
-        self.tolerance = tolerance or 0.0
+        self.numeric_tolerance = numeric_tolerance or 0.0
 
-    def compare(self, dict1: dict, dict2: dict, ignore_keys: list[str] = None, tolerance: float = 0.0) -> dict:
+    def compare(self, dict1: dict, dict2: dict, ignore_keys: list[str] = None, numeric_tolerance: float = 0.0) -> dict:
         """
         Public method to compare two dictionaries and return their differences.
         """
 
         effective_ignore_keys = ignore_keys or self.ignore_keys
-        effective_tolerance = tolerance or self.tolerance
-        return self._compare_dicts(dict1, dict2, ignore_keys=effective_ignore_keys, tolerance=effective_tolerance)
+        effective_numeric_tolerance = numeric_tolerance or self.numeric_tolerance
+        return self._compare_dicts(
+            dict1, dict2, ignore_keys=effective_ignore_keys, numeric_tolerance=effective_numeric_tolerance
+        )
 
     def compare_keys(self, dict1: dict, dict2: dict, ignore_keys: list[str] = None) -> dict:
         """
@@ -27,9 +29,15 @@ class DictionaryComparer:
         effective_ignore_keys = ignore_keys or self.ignore_keys
         return self._compare_keys(dict1, dict2, ignore_keys=effective_ignore_keys)
 
-    def _compare_lists(self, list1: list, list2: list, tolerance: float = 0.0) -> dict:
+    def compare_lists(self, list1: list, list2: list, numeric_tolerance: float = 0.0) -> dict:
         """
-        Compare two lists and return added and removed items, considering tolerance for numeric values.
+        Public method to compare two lists and return their differences.
+        """
+        return self._compare_lists(list1, list2, numeric_tolerance)
+
+    def _compare_lists(self, list1: list, list2: list, numeric_tolerance: float = 0.0) -> dict:
+        """
+        Compare two lists and return added and removed items, considering numeric_tolerance for numeric values.
         """
         added = []
         removed = []
@@ -37,8 +45,8 @@ class DictionaryComparer:
         for item in list2:
             if item not in list1:
                 if isinstance(item, (int, float)):
-                    # Check if any item in list1 is within the tolerance range
-                    if not any(isinstance(x, (int, float)) and abs(item - x) <= tolerance for x in list1):
+                    # Check if any item in list1 is within the numeric_tolerance range
+                    if not any(isinstance(x, (int, float)) and abs(item - x) <= numeric_tolerance for x in list1):
                         added.append(item)
                 else:
                     added.append(item)
@@ -46,8 +54,8 @@ class DictionaryComparer:
         for item in list1:
             if item not in list2:
                 if isinstance(item, (int, float)):
-                    # Check if any item in list2 is within the tolerance range
-                    if not any(isinstance(x, (int, float)) and abs(item - x) <= tolerance for x in list2):
+                    # Check if any item in list2 is within the numeric_tolerance range
+                    if not any(isinstance(x, (int, float)) and abs(item - x) <= numeric_tolerance for x in list2):
                         removed.append(item)
                 else:
                     removed.append(item)
@@ -55,7 +63,12 @@ class DictionaryComparer:
         return {"added": added, "removed": removed}
 
     def _compare_dicts(
-        self, dict1: dict, dict2: dict, parent_key: str = "", ignore_keys: list[str] = None, tolerance: float = 0.0
+        self,
+        dict1: dict,
+        dict2: dict,
+        parent_key: str = "",
+        ignore_keys: list[str] = None,
+        numeric_tolerance: float = 0.0,
     ) -> dict:
         """
         Recursive helper to compare nested dictionaries with detailed diffs.
@@ -87,12 +100,12 @@ class DictionaryComparer:
 
             if isinstance(value1, dict) and isinstance(value2, dict):
                 # Recurse for nested dictionaries
-                nested_diff = self._compare_dicts(value1, value2, full_key, ignore_keys, tolerance)
+                nested_diff = self._compare_dicts(value1, value2, full_key, ignore_keys, numeric_tolerance)
                 for diff_type in nested_diff:
                     differences[diff_type].extend(nested_diff[diff_type])
             elif isinstance(value1, list) and isinstance(value2, list):
                 # Compare lists
-                list_diff = self._compare_lists(value1, value2, tolerance)
+                list_diff = self._compare_lists(value1, value2, numeric_tolerance)
                 if list_diff["added"] or list_diff["removed"]:
                     differences["modified"].append(
                         {
@@ -115,8 +128,8 @@ class DictionaryComparer:
                     }
                 )
             elif isinstance(value1, (int, float)) and isinstance(value2, (int, float)):
-                # Compare numbers with tolerance
-                if abs(value1 - value2) > tolerance:
+                # Compare numbers with numeric_tolerance
+                if abs(value1 - value2) > numeric_tolerance:
                     differences["modified"].append(
                         {
                             "key": full_key,
