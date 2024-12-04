@@ -1,6 +1,6 @@
 from .comparer import DictionaryComparer
 
-def compare_dicts(dict1: dict, dict2: dict, strict_types: bool = True, ignore_keys: list[str] = None) -> dict:
+def compare_dicts(dict1: dict, dict2: dict, strict_types: bool = True, ignore_keys: list[str] = None, tolerance: float = 0.0) -> dict:
     """
     Functional API to compare two dictionaries in detail, including added, removed, and modified values.
     
@@ -10,7 +10,7 @@ def compare_dicts(dict1: dict, dict2: dict, strict_types: bool = True, ignore_ke
     :param ignore_keys: List of keys (or key paths) to ignore during the comparison. Defaults to None.
     :return: A dictionary summarizing differences (added, removed, modified).
     """
-    comparer = DictionaryComparer(strict_types, ignore_keys)
+    comparer = DictionaryComparer(strict_types, ignore_keys, tolerance)
     return comparer.compare(dict1, dict2)
 
 def compare_keys(dict1: dict, dict2: dict, strict_types: bool = True, ignore_keys: list[str] = None) -> dict:
