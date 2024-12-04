@@ -54,7 +54,9 @@ class DictionaryComparer:
 
         return {"added": added, "removed": removed}
 
-    def _compare_dicts(self, dict1: dict, dict2: dict, parent_key: str = "", ignore_keys: list[str] = None, tolerance: float = 0.0) -> dict:
+    def _compare_dicts(
+        self, dict1: dict, dict2: dict, parent_key: str = "", ignore_keys: list[str] = None, tolerance: float = 0.0
+    ) -> dict:
         """
         Recursive helper to compare nested dictionaries with detailed diffs.
         """
@@ -92,50 +94,54 @@ class DictionaryComparer:
                 # Compare lists
                 list_diff = self._compare_lists(value1, value2, tolerance)
                 if list_diff["added"] or list_diff["removed"]:
-                    differences["modified"].append({
-                        "key": full_key,
-                        "change_type": "list",
-                        "added": list_diff["added"],
-                        "removed": list_diff["removed"],
-                    })
+                    differences["modified"].append(
+                        {
+                            "key": full_key,
+                            "change_type": "list",
+                            "added": list_diff["added"],
+                            "removed": list_diff["removed"],
+                        }
+                    )
                 else:
                     differences["common"].append(full_key)
             elif self.strict_types and type(value1) != type(value2):
                 # Type mismatch
-                differences["modified"].append({
-                    "key": full_key,
-                    "change_type": "type",
-                    "old_type": type(value1).__name__,
-                    "new_type": type(value2).__name__
-                })
+                differences["modified"].append(
+                    {
+                        "key": full_key,
+                        "change_type": "type",
+                        "old_type": type(value1).__name__,
+                        "new_type": type(value2).__name__,
+                    }
+                )
             elif isinstance(value1, (int, float)) and isinstance(value2, (int, float)):
                 # Compare numbers with tolerance
                 if abs(value1 - value2) > tolerance:
-                    differences["modified"].append({
-                        "key": full_key,
-                        "change_type": "value",
-                        "old_value": value1,
-                        "new_value": value2,
-                    })
+                    differences["modified"].append(
+                        {
+                            "key": full_key,
+                            "change_type": "value",
+                            "old_value": value1,
+                            "new_value": value2,
+                        }
+                    )
                 else:
                     differences["common"].append(full_key)
             elif value1 != value2:
                 # Value mismatch
-                differences["modified"].append({
-                    "key": full_key,
-                    "change_type": "value",
-                    "old_value": value1,
-                    "new_value": value2,
-                })
+                differences["modified"].append(
+                    {
+                        "key": full_key,
+                        "change_type": "value",
+                        "old_value": value1,
+                        "new_value": value2,
+                    }
+                )
             else:
                 # Values are identical
                 differences["common"].append(full_key)
 
         return differences
-
-
-
-
 
     def _compare_keys(self, dict1: dict, dict2: dict, parent_key: str = "", ignore_keys: list[str] = None) -> dict:
         """

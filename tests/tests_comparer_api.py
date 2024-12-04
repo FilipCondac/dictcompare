@@ -1,5 +1,6 @@
 from dictcompare import compare_dicts, compare_keys
 
+
 # Basic Tests for Functional API
 def test_compare_dicts_api():
     dict1 = {"name": "John"}
@@ -9,6 +10,7 @@ def test_compare_dicts_api():
     assert result["removed"] == []
     assert result["modified"] == []
 
+
 def test_compare_keys_api():
     dict1 = {"name": "John"}
     dict2 = {"name": "John", "age": 30}
@@ -16,6 +18,7 @@ def test_compare_keys_api():
     assert result["added"] == ["age"]
     assert result["removed"] == []
     assert result["common"] == ["name"]
+
 
 # Test API with Ignore Keys
 def test_compare_dicts_api_ignore_keys():
@@ -26,6 +29,7 @@ def test_compare_dicts_api_ignore_keys():
     assert result["removed"] == []
     assert result["modified"] == []  # 'age' is ignored
 
+
 def test_compare_keys_api_ignore_keys():
     dict1 = {"name": "John", "address": {"city": "Springfield"}}
     dict2 = {"name": "John", "address": {"city": "Shelbyville", "zip": "12345"}}
@@ -33,6 +37,7 @@ def test_compare_keys_api_ignore_keys():
     assert sorted(result["added"]) == []
     assert sorted(result["removed"]) == []
     assert sorted(result["common"]) == sorted(["name", "address", "address.city"])
+
 
 # Test Edge Cases for Functional API
 def test_compare_dicts_api_empty_dicts():
@@ -42,6 +47,7 @@ def test_compare_dicts_api_empty_dicts():
     assert result["added"] == []
     assert result["removed"] == []
     assert result["modified"] == []
+
 
 def test_compare_keys_api_empty_dicts():
     dict1 = {}
