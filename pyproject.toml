@@ -6,8 +6,9 @@ authors = ["Filip <filipcondac@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 pytest = "^8.3.4"
+mypy = "^1.13.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -16,6 +17,10 @@ black = "^24.10.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+python_version = "3.11"
+platform = "linux"
 
 [tool.black]
 line-length = 120
