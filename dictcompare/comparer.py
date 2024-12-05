@@ -16,7 +16,6 @@ class DictionaryComparer:
         """
         Public method to compare two dictionaries and return their differences.
         """
-
         effective_ignore_keys = ignore_keys or self.ignore_keys
         effective_numeric_tolerance = numeric_tolerance or self.numeric_tolerance
         return self._compare_dicts(
@@ -40,26 +39,30 @@ class DictionaryComparer:
         """
         Compare two lists and return added and removed items, considering numeric_tolerance for numeric values.
         """
-        added : list = []
-        removed : list = []
+        added: list = []
+        removed: list = []
+        queue = [(list1, list2)]  # Use a queue for iterative comparison
 
-        for item in list2:
-            if item not in list1:
-                if isinstance(item, (int, float)):
-                    # Check if any item in list1 is within the numeric_tolerance range
-                    if not any(isinstance(x, (int, float)) and abs(item - x) <= numeric_tolerance for x in list1):
+        while queue:
+            current_list1, current_list2 = queue.pop()
+
+            for item in current_list2:
+                if item not in current_list1:
+                    if isinstance(item, (int, float)):
+                        # Check for numeric tolerance
+                        if not any(isinstance(x, (int, float)) and abs(item - x) <= numeric_tolerance for x in current_list1):
+                            added.append(item)
+                    else:
                         added.append(item)
-                else:
-                    added.append(item)
 
-        for item in list1:
-            if item not in list2:
-                if isinstance(item, (int, float)):
-                    # Check if any item in list2 is within the numeric_tolerance range
-                    if not any(isinstance(x, (int, float)) and abs(item - x) <= numeric_tolerance for x in list2):
+            for item in current_list1:
+                if item not in current_list2:
+                    if isinstance(item, (int, float)):
+                        # Check for numeric tolerance
+                        if not any(isinstance(x, (int, float)) and abs(item - x) <= numeric_tolerance for x in current_list2):
+                            removed.append(item)
+                    else:
                         removed.append(item)
-                else:
-                    removed.append(item)
 
         return {"added": added, "removed": removed}
 
@@ -72,126 +75,105 @@ class DictionaryComparer:
         numeric_tolerance: float = 0.0,
     ) -> dict:
         """
-        Recursive helper to compare nested dictionaries with detailed diffs.
+        Iterative helper to compare nested dictionaries with detailed diffs.
         """
         ignore_keys = ignore_keys or []
-        
         differences: dict[str, list[str | dict[str, Any]]] = {"added": [], "removed": [], "modified": [], "common": []}
+        stack = [(dict1, dict2, parent_key)]
 
-        keys1 : set[list] = set(dict1.keys())
-        keys2 = set[list](dict2.keys())
+        while stack:
+            current_dict1, current_dict2, current_parent = stack.pop()
 
-        full_key : str
+            keys1: set = set(current_dict1.keys())
+            keys2: set = set(current_dict2.keys())
 
-        # Check added keys
-        for key in keys2 - keys1:
-            full_key = f"{parent_key}.{key}".strip(".")
-            if full_key not in ignore_keys:
-                differences["added"].append(full_key)
+            # Check added keys
+            for key in keys2 - keys1:
+                full_key = f"{current_parent}.{key}".strip(".")
+                if full_key not in ignore_keys:
+                    differences["added"].append(full_key)
 
-        # Check removed keys
-        for key in keys1 - keys2:
-            full_key = f"{parent_key}.{key}".strip(".")
-            if full_key not in ignore_keys:
-                differences["removed"].append(full_key)
+            # Check removed keys
+            for key in keys1 - keys2:
+                full_key = f"{current_parent}.{key}".strip(".")
+                if full_key not in ignore_keys:
+                    differences["removed"].append(full_key)
 
-        # Check common keys
-        for key in keys1 & keys2:
-            full_key = f"{parent_key}.{key}".strip(".")
-            if full_key in ignore_keys:
-                continue
+            # Check common keys
+            for key in keys1 & keys2:
+                full_key = f"{current_parent}.{key}".strip(".")
+                if full_key in ignore_keys:
+                    continue
 
-            value1, value2 = dict1[key], dict2[key]
+                value1, value2 = current_dict1[key], current_dict2[key]
 
-            if isinstance(value1, dict) and isinstance(value2, dict):
-                # Recurse for nested dictionaries
-                nested_diff : dict = self._compare_dicts(value1, value2, full_key, ignore_keys, numeric_tolerance)
-                for diff_type in nested_diff:
-                    differences[diff_type].extend(nested_diff[diff_type])
-            elif isinstance(value1, list) and isinstance(value2, list):
-                # Compare lists
-                list_diff : dict = self._compare_lists(value1, value2, numeric_tolerance)
-                if list_diff["added"] or list_diff["removed"]:
+                if isinstance(value1, dict) and isinstance(value2, dict):
+                    # Add nested dictionaries to stack
+                    stack.append((value1, value2, full_key))
+                elif isinstance(value1, list) and isinstance(value2, list):
+                    # Compare lists
+                    list_diff = self._compare_lists(value1, value2, numeric_tolerance)
+                    if list_diff["added"] or list_diff["removed"]:
+                        differences["modified"].append(
+                            {"key": full_key, "change_type": "list", "added": list_diff["added"], "removed": list_diff["removed"]}
+                        )
+                    else:
+                        differences["common"].append(full_key)
+                elif self.strict_types and type(value1) != type(value2):
+                    # Type mismatch
                     differences["modified"].append(
-                        {
-                            "key": full_key,
-                            "change_type": "list",
-                            "added": list_diff["added"],
-                            "removed": list_diff["removed"],
-                        }
+                        {"key": full_key, "change_type": "type", "old_type": type(value1).__name__, "new_type": type(value2).__name__}
+                    )
+                elif isinstance(value1, (int, float)) and isinstance(value2, (int, float)):
+                    # Compare numbers with numeric_tolerance
+                    if abs(value1 - value2) > numeric_tolerance:
+                        differences["modified"].append(
+                            {"key": full_key, "change_type": "value", "old_value": value1, "new_value": value2}
+                        )
+                    else:
+                        differences["common"].append(full_key)
+                elif value1 != value2:
+                    # Value mismatch
+                    differences["modified"].append(
+                        {"key": full_key, "change_type": "value", "old_value": value1, "new_value": value2}
                     )
                 else:
+                    # Values are identical
                     differences["common"].append(full_key)
-            elif self.strict_types and type(value1) != type(value2):
-                # Type mismatch
-                differences["modified"].append(
-                    {
-                        "key": full_key,
-                        "change_type": "type",
-                        "old_type": type(value1).__name__,
-                        "new_type": type(value2).__name__,
-                    }
-                )
-            elif isinstance(value1, (int, float)) and isinstance(value2, (int, float)):
-                # Compare numbers with numeric_tolerance
-                if abs(value1 - value2) > numeric_tolerance:
-                    differences["modified"].append(
-                        {
-                            "key": full_key,
-                            "change_type": "value",
-                            "old_value": value1,
-                            "new_value": value2,
-                        }
-                    )
-                else:
-                    differences["common"].append(full_key)
-            elif value1 != value2:
-                # Value mismatch
-                differences["modified"].append(
-                    {
-                        "key": full_key,
-                        "change_type": "value",
-                        "old_value": value1,
-                        "new_value": value2,
-                    }
-                )
-            else:
-                # Values are identical
-                differences["common"].append(full_key)
 
         return differences
 
     def _compare_keys(self, dict1: dict, dict2: dict, parent_key: str = "", ignore_keys: list[str] | None = None) -> dict:
         """
-        Recursive function to compare keys of nested dictionaries.
+        Iterative function to compare keys of nested dictionaries.
         """
         ignore_keys = ignore_keys or []
-        differences: dict[str, list[str | dict[str, Any]]] = {"added": [], "removed": [], "common": []}
+        differences: dict[str, list[str]] = {"added": [], "removed": [], "common": []}
+        stack = [(dict1, dict2, parent_key)]
 
-        keys1 : set[list] = set(dict1.keys())
-        keys2 : set[list] = set(dict2.keys())
+        while stack:
+            current_dict1, current_dict2, current_parent = stack.pop()
 
-        full_key : str
+            keys1: set = set(current_dict1.keys())
+            keys2: set = set(current_dict2.keys())
 
-        for key in keys2 - keys1:
-            full_key = f"{parent_key}.{key}".strip(".")
-            if full_key not in ignore_keys:
-                differences["added"].append(full_key)
-        for key in keys1 - keys2:
-            full_key = f"{parent_key}.{key}".strip(".")
-            if full_key not in ignore_keys:
-                differences["removed"].append(full_key)
+            for key in keys2 - keys1:
+                full_key = f"{current_parent}.{key}".strip(".")
+                if full_key not in ignore_keys:
+                    differences["added"].append(full_key)
 
-        for key in keys1 & keys2:
-            full_key = f"{parent_key}.{key}".strip(".")
-            if full_key in ignore_keys:
-                continue
-            differences["common"].append(full_key)
+            for key in keys1 - keys2:
+                full_key = f"{current_parent}.{key}".strip(".")
+                if full_key not in ignore_keys:
+                    differences["removed"].append(full_key)
 
-            if isinstance(dict1[key], dict) and isinstance(dict2[key], dict):
-                nested_diff : dict = self._compare_keys(dict1[key], dict2[key], full_key, ignore_keys)
-                differences["added"].extend(nested_diff["added"])
-                differences["removed"].extend(nested_diff["removed"])
-                differences["common"].extend(nested_diff["common"])
+            for key in keys1 & keys2:
+                full_key = f"{current_parent}.{key}".strip(".")
+                if full_key in ignore_keys:
+                    continue
+                differences["common"].append(full_key)
+
+                if isinstance(current_dict1[key], dict) and isinstance(current_dict2[key], dict):
+                    stack.append((current_dict1[key], current_dict2[key], full_key))
 
         return differences
