@@ -2,7 +2,7 @@ from .comparer import DictionaryComparer
 
 
 def compare_dicts(
-    dict1: dict, dict2: dict, strict_types: bool = True, ignore_keys: list[str] = None, numeric_tolerance: float = 0.0
+    dict1: dict, dict2: dict, strict_types: bool = True, ignore_keys: list[str] | None = None, numeric_tolerance: float = 0.0
 ) -> dict:
     """
     Functional API to compare two dictionaries in detail, including added, removed, and modified values.
@@ -17,7 +17,7 @@ def compare_dicts(
     return comparer.compare(dict1, dict2)
 
 
-def compare_keys(dict1: dict, dict2: dict, strict_types: bool = True, ignore_keys: list[str] = None) -> dict:
+def compare_keys(dict1: dict, dict2: dict, strict_types: bool = True, ignore_keys: list[str] | None = None) -> dict:
     """
     Functional API to compare only the keys of two dictionaries, including nested keys.
 
